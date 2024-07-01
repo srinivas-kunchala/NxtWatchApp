@@ -1,4 +1,5 @@
-import {Component} from 'react'
+import {useState, useEffect} from 'react'
+
 import Cookies from 'js-cookie'
 import Loader from 'react-loader-spinner'
 import {HiOutlineFire, HiFire} from 'react-icons/hi'
@@ -25,18 +26,12 @@ const apiStatusConstants = {
   failure: 'FAILURE',
 }
 
-class Trending extends Component {
-  state = {
-    trendingVideosList: [],
-    apiStatus: apiStatusConstants.initial,
-  }
+const Trending = () => {
+  const [trendingVideosList, setVideosList] = useState([])
+  const [apiStatus, setApiStatus] = useState(apiStatusConstants.initial)
 
-  componentDidMount() {
-    this.getTrendingVideos()
-  }
-
-  getTrendingVideos = async () => {
-    this.setState({apiStatus: apiStatusConstants.inProgress})
+  const getTrendingVideos = async () => {
+    setApiStatus(apiStatusConstants.inProgress)
 
     const jwtToken = Cookies.get('jwt_token')
     const apiUrl = 'https://apis.ccbp.in/videos/trending'
@@ -60,97 +55,95 @@ class Trending extends Component {
         profileImageUrl: eachMovieDetails.channel.profile_image_url,
       }))
 
-      this.setState({
-        trendingVideosList: updatedMoviesList,
-        apiStatus: apiStatusConstants.success,
-      })
+      setVideosList(updatedMoviesList)
+      setApiStatus(apiStatusConstants.success)
     } else {
-      this.setState({apiStatus: apiStatusConstants.failure})
+      setApiStatus(apiStatusConstants.failure)
     }
   }
 
-  renderLoader = () => (
+  useEffect(() => {
+    getTrendingVideos()
+  }, [])
+
+  console.log(trendingVideosList)
+
+  const renderLoader = () => (
     <LoaderContainer data-testid="loader">
       <Loader type="ThreeDots" color="#0b69ff" height="50" width="50" />
     </LoaderContainer>
   )
 
-  retryButtonClicked = () => {
-    this.getTrendingVideos()
+  const retryButtonClicked = () => {
+    getTrendingVideos()
   }
 
-  renderTrendingVideos = () => {
-    const {trendingVideosList} = this.state
-    return (
-      <ThemeContext.Consumer>
-        {value => {
-          const {isDarkTheme} = value
-          return (
-            <>
-              <LinkItem darkMode={isDarkTheme}>
-                <IconContainer darkMode={isDarkTheme}>
-                  {isDarkTheme ? (
-                    <HiFire className="header-icon" />
-                  ) : (
-                    <HiOutlineFire className="header-icon" />
-                  )}
-                </IconContainer>
-                <Heading darkMode={isDarkTheme}>Trending</Heading>
-              </LinkItem>
-              <VideosContainer>
-                {trendingVideosList.map(eachMovieDetails => (
-                  <VideoItem
-                    key={eachMovieDetails.id}
-                    eachMovieDetails={eachMovieDetails}
-                  />
-                ))}
-              </VideosContainer>
-            </>
-          )
-        }}
-      </ThemeContext.Consumer>
-    )
-  }
-
-  render() {
-    const {apiStatus} = this.state
-    let renderBasedOnApiStatus
-
-    switch (apiStatus) {
-      case apiStatusConstants.failure:
-        renderBasedOnApiStatus = (
-          <FailureView retryButtonClicked={this.retryButtonClicked} />
+  const renderTrendingVideos = () => (
+    <ThemeContext.Consumer>
+      {value => {
+        const {isDarkTheme} = value
+        return (
+          <>
+            <LinkItem darkMode={isDarkTheme}>
+              <IconContainer darkMode={isDarkTheme}>
+                {isDarkTheme ? (
+                  <HiFire className="header-icon" />
+                ) : (
+                  <HiOutlineFire className="header-icon" />
+                )}
+              </IconContainer>
+              <Heading darkMode={isDarkTheme}>Trending</Heading>
+            </LinkItem>
+            <VideosContainer>
+              {trendingVideosList.map(eachMovieDetails => (
+                <VideoItem
+                  key={eachMovieDetails.id}
+                  eachMovieDetails={eachMovieDetails}
+                />
+              ))}
+            </VideosContainer>
+          </>
         )
-        break
-      case apiStatusConstants.success:
-        renderBasedOnApiStatus = this.renderTrendingVideos()
-        break
-      case apiStatusConstants.inProgress:
-        renderBasedOnApiStatus = this.renderLoader()
-        break
-      default:
-        renderBasedOnApiStatus = ''
-    }
-    return (
-      <ThemeContext.Consumer>
-        {value => {
-          const {isDarkTheme} = value
+      }}
+    </ThemeContext.Consumer>
+  )
 
-          return (
-            <>
-              <Header />
-              <TrendingContainer darkMode={isDarkTheme} data-testid="trending">
-                <SideBar />
-                <TrendingContentContainer>
-                  {renderBasedOnApiStatus}
-                </TrendingContentContainer>
-              </TrendingContainer>
-            </>
-          )
-        }}
-      </ThemeContext.Consumer>
-    )
+  let renderBasedOnApiStatus
+
+  switch (apiStatus) {
+    case apiStatusConstants.failure:
+      renderBasedOnApiStatus = (
+        <FailureView retryButtonClicked={retryButtonClicked()} />
+      )
+      break
+    case apiStatusConstants.success:
+      renderBasedOnApiStatus = renderTrendingVideos()
+      break
+    case apiStatusConstants.inProgress:
+      renderBasedOnApiStatus = renderLoader()
+      break
+    default:
+      renderBasedOnApiStatus = ''
   }
+  return (
+    <ThemeContext.Consumer>
+      {value => {
+        const {isDarkTheme} = value
+
+        return (
+          <>
+            <Header />
+            <TrendingContainer darkMode={isDarkTheme} data-testid="trending">
+              <SideBar />
+              <TrendingContentContainer>
+                {renderBasedOnApiStatus}
+              </TrendingContentContainer>
+            </TrendingContainer>
+          </>
+        )
+      }}
+    </ThemeContext.Consumer>
+  )
 }
 
 export default Trending

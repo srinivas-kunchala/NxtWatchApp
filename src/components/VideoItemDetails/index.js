@@ -1,4 +1,4 @@
-import {Component} from 'react'
+import {useState, useEffect} from 'react'
 import Cookies from 'js-cookie'
 import Loader from 'react-loader-spinner'
 import ReactPlayer from 'react-player'
@@ -37,22 +37,17 @@ const apiStatusConstants = {
   failure: 'FAILURE',
 }
 
-class VideoItemDetails extends Component {
-  state = {
-    videoDetails: {},
-    apiStatus: apiStatusConstants.initial,
-    isLike: false,
-    isDislike: false,
-    isSaved: false,
-  }
+const VideoItemDetails = props => {
+  const [videoDetails, setVideoDetails] = useState({})
+  const [apiStatus, setApiStatus] = useState(apiStatusConstants.initial)
+  const [isLike, setIsLike] = useState(false)
+  const [isDisLike, setDisLike] = useState(false)
+  const [isSaved, setSaved] = useState(false)
 
-  componentDidMount() {
-    this.fetchVideoData()
-  }
+  const fetchVideoData = async () => {
+    setApiStatus(apiStatusConstants.inProgress)
 
-  fetchVideoData = async () => {
-    this.setState({apiStatus: apiStatusConstants.inProgress})
-    const {match} = this.props
+    const {match} = props
     const {params} = match
     const {id} = params
 
@@ -81,185 +76,180 @@ class VideoItemDetails extends Component {
         subscriberCount: data.video_details.channel.subscriber_count,
       }
 
-      this.setState({
-        videoDetails: updatedVideoDetails,
-        apiStatus: apiStatusConstants.success,
-      })
+      setVideoDetails(updatedVideoDetails)
+      setApiStatus(apiStatusConstants.success)
     } else {
-      this.setState({apiStatus: apiStatusConstants.failure})
+      setApiStatus(apiStatusConstants.failure)
     }
   }
 
-  renderPlayer = () => {
-    const {videoDetails} = this.state
-    return (
-      <ReactPlayerContainer>
-        <ReactPlayer
-          url={videoDetails.videoUrl}
-          controls
-          width="100%"
-          height="70vh"
-        />
-      </ReactPlayerContainer>
-    )
-  }
+  useEffect(() => {
+    fetchVideoData()
+  }, [])
 
-  renderLoader = () => (
+  const renderPlayer = () => (
+    <ReactPlayerContainer>
+      <ReactPlayer
+        url={videoDetails.videoUrl}
+        controls
+        width="100%"
+        height="70vh"
+      />
+    </ReactPlayerContainer>
+  )
+
+  const renderLoader = () => (
     <LoaderContainer data-testid="loader">
       <Loader type="ThreeDots" color="#0b69ff" height="50" width="50" />
     </LoaderContainer>
   )
 
-  renderVideoDetailsOnSuccess = () => {
-    const {videoDetails, isLike, isDislike, isSaved} = this.state
+  const renderVideoDetailsOnSuccess = () => (
+    <ThemeContext.Consumer>
+      {value => {
+        const {isDarkTheme, saveVideoButtonClicked} = value
+        const likeIconClassName = isLike ? 'selected' : 'not-selected'
+        const dislikeIconClassName = isDisLike ? 'selected' : 'not-selected'
+        const saveButtonIconClassName = isSaved ? 'selected' : 'not-selected'
+        const saveButtonText = isSaved ? 'Saved' : 'Save'
 
-    return (
-      <ThemeContext.Consumer>
-        {value => {
-          const {isDarkTheme, saveVideoButtonClicked} = value
-          const likeIconClassName = isLike ? 'selected' : 'not-selected'
-          const dislikeIconClassName = isDislike ? 'selected' : 'not-selected'
-          const saveButtonIconClassName = isSaved ? 'selected' : 'not-selected'
-          const saveButtonText = isSaved ? 'Saved' : 'Save'
+        const onSaveButtonClicked = () => {
+          setSaved(previous => !previous)
 
-          const onSaveButtonClicked = () => {
-            this.setState(prevState => ({isSaved: !prevState.isSaved}))
-            saveVideoButtonClicked({
-              videoDetails,
-            })
-          }
+          saveVideoButtonClicked({
+            videoDetails,
+          })
+        }
 
-          const onLikeButtonClicked = () => {
-            this.setState({isLike: true, isDislike: false})
-          }
+        const onLikeButtonClicked = () => {
+          setIsLike(true)
+          setDisLike(false)
+        }
 
-          const onDislikeButtonClicked = () => {
-            this.setState({isDislike: true, isLike: false})
-          }
+        const onDislikeButtonClicked = () => {
+          setIsLike(false)
+          setDisLike(true)
+        }
 
-          return (
-            <PlayerAndVideoDetailsContainer>
-              {this.renderPlayer()}
-              <Description darkMode={isDarkTheme}>
-                {videoDetails.description}
-              </Description>
-              <DynamicDataContainer>
-                <LeftDynamicContainer>
-                  <DynamicDataStyling darkMode={isDarkTheme}>
-                    {videoDetails.viewCount}
-                  </DynamicDataStyling>
-                  <DynamicDataStyling darkMode={isDarkTheme}>
-                    {videoDetails.publishedAt}
-                  </DynamicDataStyling>
-                </LeftDynamicContainer>
-                <RightDynamicContainer>
-                  <AiOutlineLike
-                    className={`icon-in-video-item ${likeIconClassName}`}
-                  />
-                  <Button
-                    active={isLike}
-                    style={{color: '#64748b'}}
-                    onClick={onLikeButtonClicked}
-                  >
-                    Like
-                  </Button>
+        return (
+          <PlayerAndVideoDetailsContainer>
+            {renderPlayer()}
+            <Description darkMode={isDarkTheme}>
+              {videoDetails.description}
+            </Description>
+            <DynamicDataContainer>
+              <LeftDynamicContainer>
+                <DynamicDataStyling darkMode={isDarkTheme}>
+                  {videoDetails.viewCount}
+                </DynamicDataStyling>
+                <DynamicDataStyling darkMode={isDarkTheme}>
+                  {videoDetails.publishedAt}
+                </DynamicDataStyling>
+              </LeftDynamicContainer>
+              <RightDynamicContainer>
+                <AiOutlineLike
+                  className={`icon-in-video-item ${likeIconClassName}`}
+                />
+                <Button
+                  active={isLike}
+                  style={{color: '#64748b'}}
+                  onClick={onLikeButtonClicked}
+                >
+                  Like
+                </Button>
 
-                  <AiOutlineDislike
-                    className={`icon-in-video-item ${dislikeIconClassName}`}
-                  />
-                  <Button
-                    active={isDislike}
-                    style={{color: '#64748b'}}
-                    onClick={onDislikeButtonClicked}
-                  >
-                    Dislike
-                  </Button>
+                <AiOutlineDislike
+                  className={`icon-in-video-item ${dislikeIconClassName}`}
+                />
+                <Button
+                  active={isDisLike}
+                  style={{color: '#64748b'}}
+                  onClick={onDislikeButtonClicked}
+                >
+                  Dislike
+                </Button>
 
-                  <BiListPlus
-                    className={`icon-in-video-item ${saveButtonIconClassName} `}
-                  />
-                  <Button
-                    onClick={onSaveButtonClicked}
-                    className={saveButtonIconClassName}
-                  >
-                    {saveButtonText}
-                  </Button>
-                </RightDynamicContainer>
-              </DynamicDataContainer>
-              <HorizontalLine />
-              <DetailsContainer>
-                <ProfileContainer>
-                  <Profile
-                    src={videoDetails.profileImageUrl}
-                    alt="channel logo"
-                  />
-                </ProfileContainer>
-                <AboutContainer>
-                  <Title darkMode={isDarkTheme}>{videoDetails.title}</Title>
+                <BiListPlus
+                  className={`icon-in-video-item ${saveButtonIconClassName} `}
+                />
+                <Button
+                  onClick={onSaveButtonClicked}
+                  className={saveButtonIconClassName}
+                >
+                  {saveButtonText}
+                </Button>
+              </RightDynamicContainer>
+            </DynamicDataContainer>
+            <HorizontalLine />
+            <DetailsContainer>
+              <ProfileContainer>
+                <Profile
+                  src={videoDetails.profileImageUrl}
+                  alt="channel logo"
+                />
+              </ProfileContainer>
+              <AboutContainer>
+                <Title darkMode={isDarkTheme}>{videoDetails.title}</Title>
+                <ChannelNameViewCountAndPublishedStyling>
+                  {videoDetails.channelName}
+                </ChannelNameViewCountAndPublishedStyling>
+                <DynamicDataContainer>
                   <ChannelNameViewCountAndPublishedStyling>
-                    {videoDetails.channelName}
+                    {videoDetails.subscriberCount}
                   </ChannelNameViewCountAndPublishedStyling>
-                  <DynamicDataContainer>
-                    <ChannelNameViewCountAndPublishedStyling>
-                      {videoDetails.subscriberCount}
-                    </ChannelNameViewCountAndPublishedStyling>
-                  </DynamicDataContainer>
-                </AboutContainer>
-              </DetailsContainer>
-            </PlayerAndVideoDetailsContainer>
-          )
-        }}
-      </ThemeContext.Consumer>
-    )
-  }
-
-  retryButtonClicked = () => {
-    this.fetchVideoData()
-  }
-
-  render() {
-    const {apiStatus} = this.state
-    let renderBasedOnApiStatus
-
-    switch (apiStatus) {
-      case apiStatusConstants.failure:
-        renderBasedOnApiStatus = (
-          <FailureView retryButtonClicked={this.retryButtonClicked} />
+                </DynamicDataContainer>
+              </AboutContainer>
+            </DetailsContainer>
+          </PlayerAndVideoDetailsContainer>
         )
-        break
-      case apiStatusConstants.success:
-        renderBasedOnApiStatus = this.renderVideoDetailsOnSuccess()
-        break
-      case apiStatusConstants.inProgress:
-        renderBasedOnApiStatus = this.renderLoader()
-        break
-      default:
-        renderBasedOnApiStatus = ''
-    }
+      }}
+    </ThemeContext.Consumer>
+  )
 
-    return (
-      <ThemeContext.Consumer>
-        {value => {
-          const {isDarkTheme} = value
-
-          return (
-            <>
-              <Header />
-              <VideoDetailsContainer
-                darkMode={isDarkTheme}
-                data-testid="videoItemDetails"
-              >
-                <SideBar />
-                <VideoContentContainer>
-                  {renderBasedOnApiStatus}
-                </VideoContentContainer>
-              </VideoDetailsContainer>
-            </>
-          )
-        }}
-      </ThemeContext.Consumer>
-    )
+  const retryButtonClicked = () => {
+    fetchVideoData()
   }
+
+  let renderBasedOnApiStatus
+
+  switch (apiStatus) {
+    case apiStatusConstants.failure:
+      renderBasedOnApiStatus = (
+        <FailureView retryButtonClicked={retryButtonClicked()} />
+      )
+      break
+    case apiStatusConstants.success:
+      renderBasedOnApiStatus = renderVideoDetailsOnSuccess()
+      break
+    case apiStatusConstants.inProgress:
+      renderBasedOnApiStatus = renderLoader()
+      break
+    default:
+      renderBasedOnApiStatus = ''
+  }
+
+  return (
+    <ThemeContext.Consumer>
+      {value => {
+        const {isDarkTheme} = value
+
+        return (
+          <>
+            <Header />
+            <VideoDetailsContainer
+              darkMode={isDarkTheme}
+              data-testid="videoItemDetails"
+            >
+              <SideBar />
+              <VideoContentContainer>
+                {renderBasedOnApiStatus}
+              </VideoContentContainer>
+            </VideoDetailsContainer>
+          </>
+        )
+      }}
+    </ThemeContext.Consumer>
+  )
 }
 
 export default VideoItemDetails
